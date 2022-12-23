@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cu116
+torch=1.13.1
+datasets
+evaluate
+numpy
+pandas
+scikit-learn
+tqdm
+transformers

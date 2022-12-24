@@ -45,7 +45,7 @@ def main():
 
     df = prepare_data(args.data_path, args.model)
 
-    model, tokenizer, tokenizer_fn = prepare_model(args, df)
+    model, tokenizer, tokenizer_fn = prepare_model(args, df.columns[3:])
 
     train_dataset, test_dataset = prepare_training_data(df, tokenizer_fn, args.split_type)
 

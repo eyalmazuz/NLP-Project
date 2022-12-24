@@ -1,6 +1,8 @@
 from datasets import Dataset
 
 import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
 
 from sklearn.model_selection import LeavePGroupsOut
 
@@ -56,7 +58,7 @@ def prepare_metrics(tokenizer, accuracy):
     return compute_metrics
 
 
-def prepare_model(args, df):
+def prepare_model(args, labels=None):
     tokenizer = AutoTokenizer.from_pretrained(args.model)
 
     if args.model.startswith('t5'):
@@ -64,8 +66,8 @@ def prepare_model(args, df):
         tokenizer_fn = create_seq2seq_tokenize_fn(tokenizer, args.source_max_length, args.target_max_length)
 
     else:
-        num_labels = df.shape[1] - 3
-        id2label = {i: c for i, c in enumerate(df.columns[3:])}
+        num_labels = len(labels)
+        id2label = {i: c for i, c in enumerate(labels)}
         label2id = {c: i for i, c in id2label.items()}
         problem_type = 'multi_label_classification'
         model = AutoModelForSequenceClassification.from_pretrained(args.model,
@@ -81,6 +83,8 @@ def prepare_model(args, df):
 
 def prepare_training_data(df, tokenizer_fn, split_type):
 
+    # this is temporary group split
+    # ideally we would do the entire cross-validation
     if split_type == 'group':
         lpgo = LeavePGroupsOut(5)
         for (train_index, test_index) in lpgo.split(df, groups=df['tree_id']):
@@ -90,7 +94,17 @@ def prepare_training_data(df, tokenizer_fn, split_type):
         test_df = df.iloc[test_index]
 
     elif split_type == 'time':
-        pass
+        trees = df['tree_id'].unique()
+
+        train_df = pd.DataFrame()
+        test_df = pd.DataFrame()
+
+        for tree in tqdm(trees, total=len(trees)):
+            current_tree = df[df['tree_id'] == tree]
+            current_tree_train = current_tree[current_tree['time'] < current_tree['time'].quantile(.8)]
+            current_tree_test = current_tree[current_tree['time'] >= current_tree['time'].quantile(.8)]
+            train_df = pd.concat([train_df, current_tree_train])
+            test_df = pd.concat([test_df, current_tree_test])
 
     train_dataset = Dataset.from_pandas(train_df)
     train_dataset = train_dataset.map(tokenizer_fn, batched=True)

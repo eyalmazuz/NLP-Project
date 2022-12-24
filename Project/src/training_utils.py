@@ -2,7 +2,6 @@ from datasets import Dataset
 
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import LeavePGroupsOut
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
@@ -19,9 +18,11 @@ def create_seq2seq_tokenize_fn(tokenizer, source_max_legnth: int=512, target_max
 
     return tokenize_input
 
+
 def create_clf_tokenize_fn(tokenizer, labels, source_max_legnth: int=512):
     def tokenize_input(examples):
-        model_inputs = tokenizer(examples["inputs"], max_length=source_max_legnth, padding=True, truncation=True, return_tensors='pt')
+        model_inputs = tokenizer(examples["inputs"], max_length=source_max_legnth,
+                                 padding=True, truncation=True, return_tensors='pt')
 
         labels_batch = {k: examples[k] for k in examples.keys() if k in labels}
         # create numpy array of shape (batch_size, num_labels)
@@ -35,7 +36,6 @@ def create_clf_tokenize_fn(tokenizer, labels, source_max_legnth: int=512):
         return model_inputs
 
     return tokenize_input
-
 
 
 def prepare_metrics(tokenizer, accuracy):
@@ -54,6 +54,7 @@ def prepare_metrics(tokenizer, accuracy):
         return results
 
     return compute_metrics
+
 
 def prepare_model(args, df):
     tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -75,8 +76,8 @@ def prepare_model(args, df):
 
         tokenizer_fn = create_clf_tokenize_fn(tokenizer, label2id.keys(), args.source_max_length)
 
-    
     return model, tokenizer, tokenizer_fn
+
 
 def prepare_training_data(df, tokenizer_fn, split_type):
 

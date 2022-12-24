@@ -1,5 +1,5 @@
 from transformers import TrainingArguments, Trainer, IntervalStrategy
-from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, Trainer, TrainingArguments, DataCollatorForSeq2Seq
+from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq
 
 
 def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
@@ -14,7 +14,7 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
             num_train_epochs=args.epochs,
             # warmup_steps=4000,
             fp16=args.fp16,
-            #lr_scheduler_type='cosine_with_restarts',
+            # lr_scheduler_type='cosine_with_restarts',
             weight_decay=0.01,
             evaluation_strategy=IntervalStrategy.STEPS,
             save_strategy=IntervalStrategy.STEPS,
@@ -49,7 +49,7 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
             num_train_epochs=args.epochs,
             # warmup_steps=4000,
             fp16=args.fp16,
-            #lr_scheduler_type='cosine_with_restarts',
+            # lr_scheduler_type='cosine_with_restarts',
             weight_decay=0.01,
             evaluation_strategy=IntervalStrategy.STEPS,
             save_strategy=IntervalStrategy.STEPS,
@@ -68,6 +68,5 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
             eval_dataset=test_dataset,
             compute_metrics=metrics,
         )
-
 
     trainer.train()

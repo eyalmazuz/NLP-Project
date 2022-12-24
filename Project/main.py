@@ -1,13 +1,14 @@
 import argparse
 import os
-os.environ["WANDB_DISABLED"] = "true"
+
 import evaluate
-import numpy as np
-import pandas as pd
 
 from src.utils import prepare_data
-from src.training_utils import create_seq2seq_tokenize_fn, create_clf_tokenize_fn, prepare_metrics, prepare_model, prepare_training_data
+from src.training_utils import prepare_metrics, prepare_model, prepare_training_data
 from src.training import train
+
+os.environ["WANDB_DISABLED"] = "true"
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -27,11 +28,14 @@ def parse_args():
     parser.add_argument('-lr', '--learning-rate', type=float, default=2e-5,
                         help='Learning rate to use in the experiments')
     parser.add_argument('-b', '--batch-size', type=int, default=4, help='Batch size to use during training')
-    parser.add_argument('--accumulation-steps', type=int, default=1, help='How many steps of gradient accumulation to perform before updating weights')
+    parser.add_argument('--accumulation-steps', type=int, default=1,
+                        help='How many steps of gradient accumulation to perform before updating weights')
     parser.add_argument('--epochs', type=int, default=3, help='Number of training epochs to perform')
-    parser.add_argument('--fp16', action='store_true', help='if to use fp16 backend when training on compatible devices')
+    parser.add_argument('--fp16', action='store_true',
+                        help='if to use fp16 backend when training on compatible devices')
     parser.add_argument('--save-steps', type=int, default=100, help='After how many steps to save the model')
-    parser.add_argument('--logging-steps', type=int, default=50, help='After how many steps to perform evaluation to the model')
+    parser.add_argument('--logging-steps', type=int, default=50,
+                        help='After how many steps to perform evaluation to the model')
 
     return parser.parse_args()
 
@@ -51,5 +55,6 @@ def main():
 
     train(model, tokenizer, train_dataset, test_dataset, metrics, args)
 
-if __name__ == "__main__": 
-     main()
+
+if __name__ == "__main__":
+    main()

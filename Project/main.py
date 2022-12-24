@@ -45,9 +45,9 @@ def main():
 
     df = prepare_data(args.data_path, args.model)
 
-    model, tokenizer, tokenizer_fn = prepare_model(args, df.columns[3:])
+    model, tokenizer = prepare_model(args, df.columns[3:])
 
-    train_dataset, test_dataset = prepare_training_data(df, tokenizer_fn, args.split_type)
+    train_dataset, test_dataset = prepare_training_data(df, tokenizer, df.columns[3:], args)
 
     accuracy = evaluate.load("accuracy")
 

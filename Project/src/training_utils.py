@@ -9,35 +9,29 @@ from sklearn.model_selection import LeavePGroupsOut
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
 
 
-def create_seq2seq_tokenize_fn(tokenizer, source_max_legnth: int=512, target_max_legnth: int=128):
-    def tokenize_input(examples):
-        model_inputs = tokenizer(examples["inputs"], max_length=source_max_legnth, truncation=True)
-        with tokenizer.as_target_tokenizer():
-            labels = tokenizer(examples["labels"], max_length=target_max_legnth, truncation=True)
-        model_inputs["labels"] = labels["input_ids"]
+def tokenize_seq2seq_input(examples, tokenizer, source_max_length: int=1024, target_max_length: int=128):
+    model_inputs = tokenizer(examples["inputs"], max_length=source_max_length, truncation=True)
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(examples["labels"], max_length=target_max_length, truncation=True)
+    model_inputs["labels"] = labels["input_ids"]
 
-        return model_inputs
-
-    return tokenize_input
+    return model_inputs
 
 
-def create_clf_tokenize_fn(tokenizer, labels, source_max_legnth: int=512):
-    def tokenize_input(examples):
-        model_inputs = tokenizer(examples["inputs"], max_length=source_max_legnth,
-                                 padding=True, truncation=True, return_tensors='pt')
+def tokenize_classification_input(examples, tokenizer, labels, source_max_length: int=512):
+    model_inputs = tokenizer(examples["inputs"], max_length=source_max_length,
+                                padding=True, truncation=True, return_tensors='pt')
 
-        labels_batch = {k: examples[k] for k in examples.keys() if k in labels}
-        # create numpy array of shape (batch_size, num_labels)
-        labels_matrix = np.zeros((len(examples["inputs"]), len(labels)))
-        # fill numpy array
-        for idx, label in enumerate(labels):
-            labels_matrix[:, idx] = labels_batch[label]
+    labels_batch = {k: examples[k] for k in examples.keys() if k in labels}
+    # create numpy array of shape (batch_size, num_labels)
+    labels_matrix = np.zeros((len(examples["inputs"]), len(labels)))
+    # fill numpy array
+    for idx, label in enumerate(labels):
+        labels_matrix[:, idx] = labels_batch[label]
 
-        model_inputs["labels"] = labels_matrix.tolist()
+    model_inputs["labels"] = labels_matrix.tolist()
 
-        return model_inputs
-
-    return tokenize_input
+    return model_inputs
 
 
 def prepare_metrics(tokenizer, accuracy):
@@ -63,7 +57,6 @@ def prepare_model(args, labels=None):
 
     if args.model.startswith('t5'):
         model = AutoModelForSeq2SeqLM.from_pretrained(args.model)
-        tokenizer_fn = create_seq2seq_tokenize_fn(tokenizer, args.source_max_length, args.target_max_length)
 
     else:
         num_labels = len(labels)
@@ -76,16 +69,14 @@ def prepare_model(args, labels=None):
                                                                    id2label=id2label,
                                                                    label2id=label2id)
 
-        tokenizer_fn = create_clf_tokenize_fn(tokenizer, label2id.keys(), args.source_max_length)
-
-    return model, tokenizer, tokenizer_fn
+    return model, tokenizer
 
 
-def prepare_training_data(df, tokenizer_fn, split_type):
+def prepare_training_data(df, tokenizer, labels, args):
 
     # this is temporary group split
     # ideally we would do the entire cross-validation
-    if split_type == 'group':
+    if args.split_type == 'group':
         lpgo = LeavePGroupsOut(5)
         for (train_index, test_index) in lpgo.split(df, groups=df['tree_id']):
             break
@@ -93,7 +84,7 @@ def prepare_training_data(df, tokenizer_fn, split_type):
         train_df = df.iloc[train_index]
         test_df = df.iloc[test_index]
 
-    elif split_type == 'time':
+    elif args.split_type == 'time':
         trees = df['tree_id'].unique()
 
         train_df = pd.DataFrame()
@@ -107,9 +98,38 @@ def prepare_training_data(df, tokenizer_fn, split_type):
             test_df = pd.concat([test_df, current_tree_test])
 
     train_dataset = Dataset.from_pandas(train_df)
-    train_dataset = train_dataset.map(tokenizer_fn, batched=True)
-
     test_dataset = Dataset.from_pandas(test_df)
-    test_dataset = test_dataset.map(tokenizer_fn, batched=True)
+
+    if args.model.startswith('t5'):
+        train_dataset = train_dataset.map(tokenize_seq2seq_input,
+                                          batched=True,
+                                          fn_kwargs={'tokenizer': tokenizer,
+                                                     'source_max_length': args.source_max_length,
+                                                     'target_max_length': args.target_max_length,
+                                                     },
+                                          remove_columns=train_dataset.column_names)
+        test_dataset = test_dataset.map(tokenize_seq2seq_input,
+                                          batched=True,
+                                          fn_kwargs={'tokenizer': tokenizer,
+                                                     'source_max_length': args.source_max_length,
+                                                     'target_max_length': args.target_max_length,
+                                                     },
+                                          remove_columns=test_dataset.column_names)
+
+    else:
+        train_dataset = train_dataset.map(tokenize_classification_input,
+                                          batched=True,
+                                          fn_kwargs={'tokenizer': tokenizer,
+                                                     'labels': labels,
+                                                     'source_max_length': args.source_max_length,
+                                                     },
+                                          remove_columns=train_dataset.column_names)
+        test_dataset = test_dataset.map(tokenize_classification_input,
+                                          batched=True,
+                                          fn_kwargs={'tokenizer': tokenizer,
+                                                     'labels': labels,
+                                                     'source_max_length': args.source_max_length,
+                                                     },
+                                          remove_columns=test_dataset.column_names)
 
     return train_dataset, test_dataset

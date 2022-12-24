@@ -3,20 +3,31 @@ from tqdm.auto import tqdm
 
 tqdm.pandas()
 
-def create_post_comment_pairs(df: pd.DataFrame) -> pd.DataFrame:
+def create_post_comment_pairs(df: pd.DataFrame, model) -> pd.DataFrame:
     tuples = []
     for row in tqdm(df.itertuples(), total=len(df)):
         if row.parent == -1:
             continue
-      
+
         tree_id = row.tree_id
         comment = row.text
         root = df[(df['tree_id'] == tree_id) & (df['parent'] == -1)]['text'].values[0]
-      
-        tuples.append((root, comment, tree_id, row.timestamp, row.labels))
 
-    tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time', 'labels'])
+        if model.startswith('t5'):
+            tuples.append((root, comment, tree_id, row.timestamp, row.labels))
+
+        else:
+            tuples.append((root, comment, tree_id, row.timestamp, *row[7:]))
+
+    if model.startswith('t5'):
+        tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time', 'labels'])
+
+    else:
+        tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time'] + df.columns[6:].tolist())
     tuples_df['inputs'] = 'comment: ' + tuples_df.comment.str.cat(' post: ' + tuples_df.post)
+
+    new_columns_order = tuples_df.columns[:4].tolist() + [tuples_df.columns[-1]] + tuples_df.columns[4:-1].tolist()
+    tuples_df = tuples_df[new_columns_order]
 
     return tuples_df
 
@@ -52,27 +63,18 @@ def convert_labels_to_text(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def create_tokenize_fn(tokenizer, source_max_legnth: int, target_max_legnth: int):
-    def tokenize_input(examples):
-        model_inputs = tokenizer(examples["inputs"], max_length=source_max_legnth, truncation=True)
-        with tokenizer.as_target_tokenizer():
-            labels = tokenizer(examples["labels"], max_length=target_max_legnth, truncation=True)
-        model_inputs["labels"] = labels["input_ids"]
 
-        return model_inputs
+def prepare_data(data_path, model):
+    df = pd.read_csv(data_path, index_col=0)
 
-    return tokenize_input
+    df = rename_df_columns(df)
 
-def compute_metrics(eval_preds):
-    preds, labels = eval_preds
-    if isinstance(preds, tuple):
-        preds = np.argmax(preds[0], -1)
-    # decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    if model.startswith('t5'):
+        df = convert_labels_to_text(df)
 
-    # Replace -100 in the labels as we can't decode them.
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    # decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+    pairs_df = create_post_comment_pairs(df, model)
+    pairs_df = remove_bad_comments(pairs_df).drop(['post', 'comment'], axis=1)
 
-    results = exact_match_metric.compute(predictions=preds.ravel(), references=labels.ravel())
+    return pairs_df
 
-    return results
+

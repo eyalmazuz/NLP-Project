@@ -76,10 +76,12 @@ def prepare_data(data_path, model):
 
     df = rename_df_columns(df)
 
+    labels = df.columns[6:].tolist()
+
     if model.startswith('t5'):
         df = convert_labels_to_text(df)
 
     pairs_df = create_post_comment_pairs(df, model)
     pairs_df = remove_bad_comments(pairs_df).drop(['post', 'comment'], axis=1)
 
-    return pairs_df
+    return pairs_df, labels

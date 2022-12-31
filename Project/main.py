@@ -43,17 +43,15 @@ def parse_args():
 def main():
     args = parse_args()
 
-    df = prepare_data(args.data_path, args.model)
+    df, labels = prepare_data(args.data_path, args.model)
 
-    model, tokenizer = prepare_model(args, df.columns[3:])
+    model, tokenizer = prepare_model(args, labels)
 
-    train_dataset, test_dataset = prepare_training_data(df, tokenizer, df.columns[3:], args)
+    train_dataset, test_dataset = prepare_training_data(df, tokenizer, labels, args)
 
-    accuracy = evaluate.load("accuracy")
+    metrics = prepare_metrics(args.model)
 
-    metrics = prepare_metrics(tokenizer, accuracy)
-
-    train(model, tokenizer, train_dataset, test_dataset, metrics, args)
+    train(model, tokenizer, train_dataset, test_dataset, metrics, args, labels=labels)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
+from functools import partial
+
 from transformers import TrainingArguments, Trainer, IntervalStrategy
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq
 
 
-def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
+def train(model, tokenizer, train_dataset, test_dataset, metrics, args, labels=None):
     if args.model.startswith('t5'):
         training_args = Seq2SeqTrainingArguments(
             output_dir=args.output_dir,
@@ -23,10 +25,13 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
             logging_steps=args.logging_steps,
             save_steps=args.save_steps,
             sortish_sampler=True,
-            save_total_limit=5
+            save_total_limit=5,
+            predict_with_generate=True,
         )
 
         data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+
+        label2id = {v: k for k, v in enumerate(labels)}
 
         trainer = Seq2SeqTrainer(
             model=model,
@@ -34,7 +39,7 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args):
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=test_dataset,
-            compute_metrics=metrics,
+            compute_metrics=partial(metrics, tokenizer=tokenizer, label2id=label2id),
             data_collator=data_collator
         )
 

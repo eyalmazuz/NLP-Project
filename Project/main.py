@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument('--save-steps', type=int, default=100, help='After how many steps to save the model')
     parser.add_argument('--logging-steps', type=int, default=50,
                         help='After how many steps to perform evaluation to the model')
+    parser.add_argument('--add-post-context', action='store_true', help='Whether to add the initial post as context to the langauge model')
 
     return parser.parse_args()
 
@@ -43,7 +44,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    df, labels = prepare_data(args.data_path, args.model)
+    df, labels = prepare_data(args.data_path, args)
 
     model, tokenizer = prepare_model(args, labels)
 

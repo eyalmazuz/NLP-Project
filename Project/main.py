@@ -7,7 +7,7 @@ from src.utils import prepare_data
 from src.training_utils import prepare_metrics, prepare_model, prepare_training_data
 from src.training import train
 
-os.environ["WANDB_DISABLED"] = "true"
+# os.environ["WANDB_DISABLED"] = "true"
 
 
 def parse_args():
@@ -16,7 +16,6 @@ def parse_args():
     parser.add_argument('-d', '--data-path', type=str,
                         required=True, help='Path to the discourse parsing CSV file')
     parser.add_argument('-m', '--model', type=str, required=True,
-                        choices=['t5-small', 't5-base', 't5-large', 'bert-base-uncased'],
                         help='Which classification model to use')
     parser.add_argument('--source-max-length', type=int, default=1024,
                         help='The maximum sequence size that the model can receive')

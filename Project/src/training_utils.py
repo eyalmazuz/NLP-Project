@@ -90,9 +90,9 @@ def compute_seq2seq_metrics(eval_preds, tokenizer, label2id):
     jaccard /= len(decoded_preds)
 
     # not sure if this is the correct way to calculate accuracy
-    # match_accuracy = accuracy_score(labels_matrix, preds_matrix)
+    match_accuracy = accuracy_score(labels_matrix, preds_matrix)
 
-    match_accuracy = (labels_matrix == preds_matrix).mean()
+    # match_accuracy = (labels_matrix == preds_matrix).mean()
 
     f1_micro_average = f1_score(y_true=labels_matrix, y_pred=preds_matrix, average='micro')
 

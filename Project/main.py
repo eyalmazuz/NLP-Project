@@ -2,10 +2,13 @@ import argparse
 import os
 
 import evaluate
+import wandb
 
 from src.utils import prepare_data
 from src.training_utils import prepare_metrics, prepare_model, prepare_training_data
 from src.training import train
+
+wandb.init(project="nlp", entity="sise-nlp-project")
 
 # os.environ["WANDB_DISABLED"] = "true"
 

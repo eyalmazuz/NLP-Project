@@ -14,14 +14,14 @@ def create_post_comment_pairs(df: pd.DataFrame, args) -> pd.DataFrame:
         comment = row.text
         root = df[(df['tree_id'] == tree_id) & (df['parent'] == -1)]['text'].values[0]
 
-        if args.model.startswith('t5'):
+        if 't5' in args.model:
             tuples.append((root, comment, tree_id, row.timestamp, row.labels))
 
         else:
             # row starts from 7 because itertuples also returns the index in the tuple.
             tuples.append((root, comment, tree_id, row.timestamp, *row[7:]))
 
-    if args.model.startswith('t5'):
+    if 't5' in args.model:
         tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time', 'labels'])
 
     else:
@@ -82,7 +82,7 @@ def prepare_data(data_path, args):
 
     labels = df.columns[6:].tolist()
 
-    if args.model.startswith('t5'):
+    if 't5' in args.model:
         df = convert_labels_to_text(df)
 
     pairs_df = create_post_comment_pairs(df, args)

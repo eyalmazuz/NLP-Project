@@ -5,7 +5,7 @@ from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorF
 
 
 def train(model, tokenizer, train_dataset, test_dataset, metrics, args, labels=None):
-    if args.model.startswith('t5'):
+    if 't5' in args.model:
         training_args = Seq2SeqTrainingArguments(
             output_dir=args.output_dir,
             learning_rate=args.learning_rate,
@@ -58,8 +58,8 @@ def train(model, tokenizer, train_dataset, test_dataset, metrics, args, labels=N
             weight_decay=0.01,
             evaluation_strategy=IntervalStrategy.STEPS,
             save_strategy=IntervalStrategy.STEPS,
-            # report_to='wandb',
-            # run_name=f'T5 Reddit discourse',
+            report_to='wandb',
+            run_name=f'{args.model}',
             logging_steps=args.logging_steps,
             save_steps=args.save_steps,
             save_total_limit=5

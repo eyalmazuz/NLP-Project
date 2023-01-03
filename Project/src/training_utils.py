@@ -105,7 +105,7 @@ def compute_seq2seq_metrics(eval_preds, tokenizer, label2id):
 
 
 def prepare_metrics(model):
-    if model.startswith('t5'):
+    if 't5' in model:
         metrics = compute_seq2seq_metrics
 
     else:
@@ -115,10 +115,15 @@ def prepare_metrics(model):
 
 
 def prepare_model(args, labels=None):
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
 
-    if args.model.startswith('t5'):
+    if 't5' in args.model:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.model)
+
+        if args.model.startswith('google'):
+            tok_name = args.model[7:].replace('-v1_1', '')
+        else:
+            tok_name = args.model
+        tokenizer = AutoTokenizer.from_pretrained(tok_name)
 
     else:
         num_labels = len(labels)
@@ -130,6 +135,8 @@ def prepare_model(args, labels=None):
                                                                    num_labels=num_labels,
                                                                    id2label=id2label,
                                                                    label2id=label2id)
+
+        tokenizer = AutoTokenizer.from_pretrained(args.model)
 
     return model, tokenizer
 
@@ -147,6 +154,7 @@ def prepare_training_data(df, tokenizer, labels, args):
         test_df = df.iloc[test_index]
 
     elif args.split_type == 'time':
+        print('in split time')
         trees = df['tree_id'].unique()
 
         train_df = pd.DataFrame()
@@ -162,7 +170,7 @@ def prepare_training_data(df, tokenizer, labels, args):
     train_dataset = Dataset.from_pandas(train_df)
     test_dataset = Dataset.from_pandas(test_df)
 
-    if args.model.startswith('t5'):
+    if 't5' in args.model:
         train_dataset = train_dataset.map(tokenize_seq2seq_input,
                                           batched=True,
                                           fn_kwargs={'tokenizer': tokenizer,

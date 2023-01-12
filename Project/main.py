@@ -39,7 +39,9 @@ def parse_args():
     parser.add_argument('--logging-steps', type=int, default=50,
                         help='After how many steps to perform evaluation to the model')
     parser.add_argument('--add-post-context', action='store_true', help='Whether to add the initial post as context to the langauge model')
-
+    parser.add_argument('--context-type', type=str, default='post', choices=['post', 'comment'],
+                        help='Which type of context will be added the original post of the current comment we are trying to label or the previous comment in the tree')
+    
     return parser.parse_args()
 
 

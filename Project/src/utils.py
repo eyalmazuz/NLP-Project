@@ -39,6 +39,40 @@ def create_post_comment_pairs(df: pd.DataFrame, args) -> pd.DataFrame:
     return tuples_df
 
 
+def create_comment_comment_pairs(df: pd.DataFrame, args) -> pd.DataFrame:
+    tuples = []
+    for row in tqdm(df.itertuples(), total=len(df)):
+        if row.parent == -1:
+            continue
+
+        tree_id = row.tree_id
+        comment = row.text
+        prev_comment = df.iloc[row.parent]['text']
+
+        if 't5' in args.model:
+            tuples.append((prev_comment, comment, tree_id, row.timestamp, row.labels))
+
+        else:
+            # row starts from 7 because itertuples also returns the index in the tuple.
+            tuples.append((prev_comment, comment, tree_id, row.timestamp, *row[7:]))
+
+    if 't5' in args.model:
+        tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time', 'labels'])
+
+    else:
+        tuples_df = pd.DataFrame(tuples, columns=['post', 'comment', 'tree_id', 'time'] + df.columns[6:].tolist())
+
+    tuples_df['inputs'] = 'comment: ' + tuples_df.comment
+
+    if args.add_post_context:
+        tuples_df['inputs'] = tuples_df['inputs'].str.cat(' post: ' + tuples_df.post)
+
+    # This makes sure that the labels are the last columns in the dataframe
+    new_columns_order = tuples_df.columns[:4].tolist() + [tuples_df.columns[-1]] + tuples_df.columns[4:-1].tolist()
+    tuples_df = tuples_df[new_columns_order]
+
+    return tuples_df
+
 def remove_bad_comments(df: pd.DataFrame) -> pd.DataFrame:
     removed_tokens = ['[removed]', '[deleted]']
 
@@ -85,7 +119,13 @@ def prepare_data(data_path, args):
     if 't5' in args.model:
         df = convert_labels_to_text(df)
 
-    pairs_df = create_post_comment_pairs(df, args)
-    pairs_df = remove_bad_comments(pairs_df).drop(['post', 'comment'], axis=1)
+
+    if args.context_type == 'post':
+        pairs_df = create_post_comment_pairs(df, args)
+        pairs_df = remove_bad_comments(pairs_df).drop(['post', 'comment'], axis=1)
+
+    elif args.context_type == 'comment':
+        pairs_df = create_comment_comment_pairs(df, args)
+        pairs_df = remove_bad_comments(pairs_df).drop(['post', 'comment'], axis=1)
 
     return pairs_df, labels
